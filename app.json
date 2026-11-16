@@ -1,0 +1,110 @@
+{
+  "expo": {
+    "name": "Loko Cooks",
+    "slug": "lokocooks",
+    "owner": "matebeto2027s-team",
+    "version": "1.0.6",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "lokocooks",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#FFFFFF"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#FFFFFF",
+      "barStyle": "dark-content"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.siximages.lokocooks",
+      "buildNumber": "8",
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "android": {
+      "package": "com.siximages.lokocooks",
+      "versionCode": 8,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#FFFFFF"
+      },
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Loko Cooks uses your location to show how far each food market is from you."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#8A1C14"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Loko Cooks to pick food and licence photos from your phone.",
+          "cameraPermission": "Allow Loko Cooks to take food, licence and rider photos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Loko Cooks to capture your rider photo inside the app.",
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6c62308d-1842-493e-a0e2-360ba6662c98"
+      },
+      "supabaseUrl": "https://lmyvvwulabezlglxjzvl.supabase.co",
+      "supabaseAnonKey": "sb_publishable_XJVKUkLgF-0OJk2Mf4N8nQ_ZhmtezXu",
+      "supabasePublishableKey": "sb_publishable_XJVKUkLgF-0OJk2Mf4N8nQ_ZhmtezXu",
+      "paymentApiUrl": "https://lmyvvwulabezlglxjzvl.supabase.co/functions/v1"
+    }
+  }
+}

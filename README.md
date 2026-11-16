@@ -1,0 +1,129 @@
+# Loko Cooks V1
+
+Food marketplace for Lusaka. Customer chooses food. Loko Cooks chooses the vendor. OTP completes the order.
+
+**Let's Eat.** · One app, two modes · A product of 6images Advertising.
+
+## Stack
+
+Expo SDK 52 + React Native 0.76.3 + Supabase + Lipila.
+
+Same EAS versions as the previous working Marketplace repo so Android preview builds do not fail on Kotlin / SDK mismatch.
+
+## Expo project
+
+| Field | Value |
+| --- | --- |
+| name | Loko Cooks |
+| slug | lokocooks |
+| package / bundle id | com.siximages.lokocooks |
+| owner | matebeto2027s-team (existing Expo org — change when you create a new one) |
+| extra.eas.projectId | 6c62308d-1842-493e-a0e2-360ba6662c98 |
+
+That is what EAS uses to find the project when you run `eas build`. You do not need `eas init` again.
+
+## No fake catalog
+
+The app does not ship stock photos, fake vendors, or sample meals.
+
+- Markets Thornpark, Longacres, Olympia exist as **names only** until admin uploads real photos from the phone.
+- Categories exist as **names only** until admin uploads a food photo for each tile.
+- Meals, sides, vendors and WhatsApp numbers are added in **Admin**.
+- Photos are uploaded from the phone (or camera) into the Supabase `catalog` bucket. Do not paste random stock URLs.
+- If a photo is empty, the screen shows a Loko Cooks colour tile — not a downloaded picture of someone else's food.
+- Home banner photo is set in Admin → Fees.
+
+## Spec match (developer brief + app-flow image)
+
+
+The screens now follow the official flow poster:
+
+1. Welcome (customer / rider)
+2. Phone + OTP
+3. Home (markets + featured meals)
+4. Choose Your Market
+5. Food category tiles
+6. Meal + free sides + quantity
+7. Basket
+8. Bicycle / motorbike
+9. Payment summary (food + platform + delivery)
+10. Order placed / tracking
+11. Rider job (accept / pickup / OTP)
+12. Delivered
+13. Order history
+
+Locked V1 rules are implemented in Supabase, not only in the UI.
+
+Still needed before a live launch (not UI):
+
+- Supabase Phone OTP SMS provider
+- Lipila keys on Edge Functions
+- WhatsApp Business API tokens
+- Replace seed vendor WhatsApp numbers with real partners
+- Real GPS map is not in V1 (status tracking is)
+
+## What is real
+
+- Phone OTP through Supabase Auth (needs your SMS provider)
+- Orders, vendors, riders, fees in Supabase
+- Lipila collections through Edge Functions
+- Delivery OTP hashed in the database
+- WhatsApp send/webhook ready when you add tokens
+
+Nothing here marks an order paid or delivered unless Lipila or the customer OTP says so.
+
+## Setup
+
+1. Create a Supabase project.
+2. Run `supabase/schema.sql`, then `supabase/seed.sql`, then `supabase/storage.sql`.
+3. Enable Phone auth. Add SMS later.
+4. Copy `.env.example` to `.env` with your project URL and anon key.
+5. Deploy functions:
+
+```bash
+supabase functions deploy create-payment
+supabase functions deploy verify-payment
+supabase functions deploy notify-vendor
+supabase functions deploy whatsapp-webhook
+supabase secrets set LIPILA_SECRET_KEY=...
+supabase secrets set LIPILA_BASE_URL=https://blz.lipila.io/api/v1
+```
+
+6. Make yourself admin after first login:
+
+```sql
+insert into public.platform_admins (user_id) values ('YOUR-USER-UUID');
+```
+
+7. Replace vendor WhatsApp numbers in Admin with real partners.
+8. `npm install` then `npx expo start`
+9. `eas build --platform android --profile internal`
+
+## Later (you said you will send these)
+
+```bash
+supabase secrets set WHATSAPP_TOKEN=...
+supabase secrets set WHATSAPP_PHONE_ID=...
+supabase secrets set WHATSAPP_VERIFY_TOKEN=...
+```
+
+Until those exist, vendors are offered in the database and an admin can accept/decline. The app does not invent an acceptance.
+
+## Locked rules implemented
+
+- One app, two modes
+- Customer does not pick the vendor
+- One order = one vendor
+- Max three vendor attempts
+- Permanent order number
+- Bicycle and motorbike kept separate
+- Sides included / free
+- Checkout shows food + platform + delivery only
+- Delivery OTP required
+- No rider force-complete
+- OTP triggers COMPLETED
+- Markets are rows, not hard-coded screens
+
+
+## Fix round 1
+See `docs/FIXES_AND_SETUP.md` for the new migration, edge functions, secrets, scheduler and test script.

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "979408329889",
+    "project_id": "lokocooks",
+    "storage_bucket": "lokocooks.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:979408329889:android:af504cbb47870212e264e0",
+        "android_client_info": {
+          "package_name": "com.siximages.lokocooks"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUMd2gkCLzFhEUXVdgo9GexEyU3eNMeqM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

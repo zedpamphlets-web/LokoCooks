@@ -1,0 +1,86 @@
+import { supabase } from "@/lib/supabase";
+
+export type BasketItem = {
+  meal_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  sides: string[];
+  image_url?: string;
+  /** Restaurant-specific price is already in `price`. */
+};
+
+export async function createOrder(input: {
+  marketId: string;
+  vendorId?: string | null;
+  deliveryType: "bicycle" | "motorbike";
+  address: { text: string; notes?: string };
+  items: BasketItem[];
+}) {
+  const { data, error } = await supabase.rpc("create_order", {
+    p_market_id: input.marketId,
+    p_vendor_id: input.vendorId || null,
+    p_delivery_type: input.deliveryType,
+    p_address: input.address,
+    p_items: input.items.map((i) => ({
+      meal_id: i.meal_id,
+      quantity: i.quantity,
+      sides: i.sides,
+    })),
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Admin only. Customers no longer start vendor searches: the server does it after payment.
+export async function startVendorSearch(orderId: string) {
+  const { data, error } = await supabase.rpc("offer_next_vendor", { p_order: orderId });
+  if (error) throw error;
+  return data;
+}
+
+export async function startRiderSearch(orderId: string) {
+  const { data, error } = await supabase.rpc("offer_next_rider", { p_order: orderId });
+  if (error) throw error;
+  return data;
+}
+
+export const TRACK_STEPS = [
+  { key: "CREATED", label: "Order received" },
+  { key: "SEARCHING_VENDOR", label: "Waiting for restaurant" },
+  { key: "VENDOR_ACCEPTED", label: "Restaurant confirmed" },
+  { key: "PREPARING", label: "Preparing your order" },
+  { key: "RIDER_ASSIGNED", label: "Rider confirmed" },
+  { key: "PICKED_UP", label: "Order confirmed" },
+  { key: "OUT_FOR_DELIVERY", label: "Rider coming" },
+  { key: "COMPLETED", label: "Delivery complete" },
+];
+
+export function stepDone(status: string, key: string) {
+  const rank: Record<string, number> = {
+    CREATED: 0,
+    PAYMENT_CONFIRMED: 1,
+    SEARCHING_VENDOR: 1,
+    VENDOR_OFFERED: 1,
+    VENDOR_ACCEPTED: 2,
+    SEARCHING_RIDER: 3,
+    NO_RIDER_AVAILABLE: 3,
+    PREPARING: 3,
+    RIDER_ASSIGNED: 4,
+    PICKED_UP: 5,
+    OUT_FOR_DELIVERY: 6,
+    OTP_VERIFIED: 7,
+    COMPLETED: 7,
+  };
+  const keyRank: Record<string, number> = {
+    CREATED: 0,
+    SEARCHING_VENDOR: 1,
+    VENDOR_ACCEPTED: 2,
+    PREPARING: 3,
+    RIDER_ASSIGNED: 4,
+    PICKED_UP: 5,
+    OUT_FOR_DELIVERY: 6,
+    COMPLETED: 7,
+  };
+  return (rank[status] ?? -1) >= (keyRank[key] ?? 99);
+}

@@ -1,0 +1,96 @@
+import { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
+import { fonts, ui } from "@/lib/theme";
+import { kw } from "@/lib/format";
+import { MkField, MkHeader, MkScreen, RedButton } from "@/components/mk";
+import { loadAccount, deliveryAddressFrom } from "@/lib/profile";
+
+/** Step 2 after the basket: choose the rider and where to deliver. Fees come from the Admin dashboard. */
+export default function ChooseRider() {
+  const [delivery, setDelivery] = useState<"bicycle" | "motorbike">("bicycle");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [fees, setFees] = useState<{ bicycle: number; motorbike: number } | null>(null);
+
+  useEffect(() => {
+    supabase.from("settings").select("*").eq("id", 1).maybeSingle().then(({ data }) => {
+      if (data) setFees({ bicycle: Number(data.bicycle_delivery_fee), motorbike: Number(data.motorbike_delivery_fee) });
+    });
+    (async () => {
+      // what the customer chose last wins; else the saved account address
+      const t = await AsyncStorage.getItem("lokocooks.delivery");
+      if (t === "bicycle" || t === "motorbike") setDelivery(t);
+      const raw = await AsyncStorage.getItem("lokocooks.address");
+      const chosen = raw ? JSON.parse(raw) : null;
+      const { details } = await loadAccount();
+      const saved = deliveryAddressFrom(details);
+      setAddress(chosen?.text || saved.text || "");
+      setNotes(chosen?.notes ?? saved.notes ?? "");
+    })();
+  }, []);
+
+  const options = [
+    { id: "bicycle" as const, icon: "bicycle" as const, title: "Bicycle", hint: "Slower · Cheaper", fee: fees?.bicycle },
+    { id: "motorbike" as const, icon: "speedometer" as const, title: "Motorbike", hint: "Faster · More expensive", fee: fees?.motorbike },
+  ];
+
+  return (
+    <MkScreen>
+      <MkHeader title="Choose Rider" />
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        {options.map((t) => {
+          const on = delivery === t.id;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setDelivery(t.id)}
+              style={[styles.option, on && { borderColor: ui.btn, backgroundColor: ui.redSoft }]}
+            >
+              <View style={[styles.optionIcon, on && { backgroundColor: ui.btn }]}>
+                <Ionicons name={t.icon} size={22} color={on ? "#fff" : ui.btn} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.optionTitle}>{t.title}</Text>
+                <Text style={styles.optionHint}>{t.hint}</Text>
+              </View>
+              <Text style={styles.optionFee}>{t.fee == null ? "" : kw(t.fee)}</Text>
+            </Pressable>
+          );
+        })}
+
+        <Text style={styles.h}>Delivery details</Text>
+        <MkField value={address} onChangeText={setAddress} placeholder="Plot, street and area" />
+        <MkField value={notes} onChangeText={setNotes} placeholder="Notes for the rider (optional)" />
+      </ScrollView>
+      <View style={styles.footer}>
+        <RedButton
+          label="Continue"
+          chevron
+          onPress={async () => {
+            if (!address.trim()) {
+              Alert.alert("Delivery details", "Add a delivery address.");
+              return;
+            }
+            await AsyncStorage.setItem("lokocooks.delivery", delivery);
+            await AsyncStorage.setItem("lokocooks.address", JSON.stringify({ text: address, notes }));
+            router.push("/(customer)/checkout");
+          }}
+        />
+      </View>
+    </MkScreen>
+  );
+}
+
+const styles = StyleSheet.create({
+  option: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: ui.line, flexDirection: "row", alignItems: "center", gap: 14 },
+  optionIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: ui.redSoft, alignItems: "center", justifyContent: "center" },
+  optionTitle: { fontFamily: fonts.title, fontSize: 16, color: ui.ink },
+  optionHint: { fontFamily: fonts.body, fontSize: 12, color: ui.sub, marginTop: 3 },
+  optionFee: { fontFamily: fonts.display, fontSize: 16, color: ui.red },
+  h: { fontFamily: fonts.title, fontSize: 15, color: ui.ink, marginTop: 8, marginBottom: 10 },
+  footer: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, backgroundColor: "#fff" },
+});

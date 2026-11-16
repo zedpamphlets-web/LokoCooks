@@ -1,0 +1,223 @@
+import { useEffect, useState } from "react";
+import { ListSkeleton } from "@/components/skeleton";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { supabase } from "@/lib/supabase";
+import { colors, fonts, radius, ui } from "@/lib/theme";
+import { Field } from "@/components/ui";
+import { AdminButton as PrimaryButton } from "@/components/admin-ui";
+import * as Location from "expo-location";
+import { PhotoPicker } from "@/components/photo-picker";
+import { confirmDialog } from "@/components/confirm";
+
+const label = { fontFamily: fonts.bodySemi, color: colors.adminMuted, fontSize: 12, marginBottom: 6, marginTop: 4 } as const;
+
+export default function AdminMarkets() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [distance, setDistance] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+
+  async function load() {
+    const { data } = await supabase.from("markets").select("*").order("sort_order");
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => {
+    load();
+  }, []);
+
+  const km = (v: string) => (v.trim() ? Number(v) : null);
+  const badCoord = (a: string, b: string) =>
+    (a.trim() || b.trim()) &&
+    (!a.trim() || !b.trim() || Number.isNaN(Number(a)) || Number.isNaN(Number(b)) || Math.abs(Number(a)) > 90 || Math.abs(Number(b)) > 180);
+
+  async function add() {
+    if (!name.trim()) return Alert.alert("Market", "Name is required.");
+    if (distance.trim() && Number.isNaN(Number(distance))) return Alert.alert("Market", "Distance must be a number.");
+    if (badCoord(lat, lng)) return Alert.alert("Market", "Enter both latitude and longitude as numbers, e.g. -15.4167 and 28.2833.");
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const { error } = await supabase.from("markets").insert({
+      name: name.trim(),
+      slug,
+      image_url: image,
+      distance_km: km(distance),
+      latitude: km(lat),
+      longitude: km(lng),
+      is_active: true,
+      sort_order: rows.length + 1,
+    });
+    if (error) return Alert.alert("Market", error.message);
+    setName("");
+    setDistance("");
+    setLat("");
+    setLng("");
+    setImage(null);
+    load();
+  }
+
+  async function saveDetails(m: any, newName: string, newDistance: string, newLat: string, newLng: string) {
+    if (!newName.trim()) return Alert.alert("Market", "Name is required.");
+    if (newDistance.trim() && Number.isNaN(Number(newDistance))) return Alert.alert("Market", "Distance must be a number.");
+    if (badCoord(newLat, newLng)) return Alert.alert("Market", "Enter both latitude and longitude as numbers, e.g. -15.4167 and 28.2833.");
+    const { error } = await supabase
+      .from("markets")
+      .update({ name: newName.trim(), distance_km: km(newDistance), latitude: km(newLat), longitude: km(newLng) })
+      .eq("id", m.id);
+    if (error) Alert.alert("Market", error.message);
+    else Alert.alert("Saved");
+    load();
+  }
+
+  async function toggle(m: any) {
+    const { error } = await supabase.from("markets").update({ is_active: !m.is_active }).eq("id", m.id);
+    if (error) Alert.alert("Market", error.message);
+    load();
+  }
+
+  async function saveImage(m: any, url: string | null) {
+    const { error } = await supabase.from("markets").update({ image_url: url }).eq("id", m.id);
+    if (error) Alert.alert("Market", error.message);
+    load();
+  }
+
+  async function move(idx: number, dir: -1 | 1) {
+    const j = idx + dir;
+    if (j < 0 || j >= rows.length) return;
+    const next = [...rows];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    await Promise.all(next.map((m, i) => supabase.from("markets").update({ sort_order: i + 1 }).eq("id", m.id)));
+    load();
+  }
+
+  async function deleteMarket(id: string) {
+    const ok = await confirmDialog({
+      title: "Delete market?",
+      message: "Are you sure you want to delete this market?",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase.from("markets").delete().eq("id", id);
+    if (error) Alert.alert("Market", error.message);
+    load();
+  }
+
+  if (loading && rows.length === 0) return <View style={{ flex: 1, backgroundColor: colors.adminBg, padding: 16 }}><ListSkeleton /></View>;
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: colors.adminBg }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <Text style={{ fontFamily: fonts.title, fontSize: 18, marginBottom: 4, color: colors.adminText }}>Add market</Text>
+      <Field value={name} onChangeText={setName} placeholder="Market name (e.g. Longacres)" />
+      <Field value={distance} onChangeText={setDistance} placeholder="Distance in km (optional, e.g. 2.1)" keyboardType="decimal-pad" />
+      <Field value={lat} onChangeText={(t) => splitPair(t, setLat, setLng, "lat")} placeholder="Latitude (optional, e.g. -15.4167)" keyboardType="numbers-and-punctuation" />
+      <Field value={lng} onChangeText={(t) => splitPair(t, setLat, setLng, "lng")} placeholder="Longitude (optional, e.g. 28.2833)" keyboardType="numbers-and-punctuation" />
+      <PhotoPicker folder="markets" uri={image} name={name || "Market"} onChange={setImage} />
+      <PrimaryButton label="Save market" onPress={add} />
+      <View style={{ height: 18 }} />
+      {rows.map((m, i) => (
+        <MarketCard
+          key={m.id + String(m.sort_order)}
+          m={m}
+          onSave={(n, d, la, lo) => saveDetails(m, n, d, la, lo)}
+          onImage={(u) => saveImage(m, u)}
+          onToggle={() => toggle(m)}
+          onDelete={() => deleteMarket(m.id)}
+          onUp={i > 0 ? () => move(i, -1) : undefined}
+          onDown={i < rows.length - 1 ? () => move(i, 1) : undefined}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
+/** Google Maps gives "-15.4167, 28.2833": pasting that into either box fills both. */
+function splitPair(text: string, setLat: (v: string) => void, setLng: (v: string) => void, which: "lat" | "lng") {
+  const m = text.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);
+  if (m) {
+    setLat(m[1]);
+    setLng(m[2]);
+  } else (which === "lat" ? setLat : setLng)(text);
+}
+
+/** Admin standing at the market taps this to fill the exact coordinates. */
+async function fillFromPhone(setLat: (v: string) => void, setLng: (v: string) => void) {
+  try {
+    const perm = await Location.requestForegroundPermissionsAsync();
+    if (perm.status !== "granted") return Alert.alert("Location", "Allow location access to use this.");
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    setLat(pos.coords.latitude.toFixed(6));
+    setLng(pos.coords.longitude.toFixed(6));
+  } catch (e: any) {
+    Alert.alert("Location", e?.message || "Could not get the location. Is GPS on?");
+  }
+}
+
+function MarketCard({
+  m,
+  onSave,
+  onImage,
+  onToggle,
+  onDelete,
+  onUp,
+  onDown,
+}: {
+  m: any;
+  onSave: (name: string, distance: string, lat: string, lng: string) => void;
+  onImage: (url: string | null) => void;
+  onToggle: () => void;
+  onDelete: () => void;
+  onUp?: () => void;
+  onDown?: () => void;
+}) {
+  const [name, setName] = useState(m.name || "");
+  const [distance, setDistance] = useState(m.distance_km != null ? String(m.distance_km) : "");
+  const [lat, setLat] = useState(m.latitude != null ? String(m.latitude) : "");
+  const [lng, setLng] = useState(m.longitude != null ? String(m.longitude) : "");
+  return (
+    <View
+      style={{
+        backgroundColor: colors.adminCard,
+        borderWidth: 1,
+        borderColor: colors.adminCardBorder,
+        borderRadius: radius.md,
+        padding: 12,
+        marginBottom: 10,
+      }}
+    >
+      <Text style={{ color: m.is_active ? ui.red : colors.adminMuted, fontFamily: fonts.bodySemi, marginBottom: 8 }}>
+        {m.is_active ? "Showing on Home" : "Hidden"}
+      </Text>
+      <Text style={label}>Name</Text>
+      <Field value={name} onChangeText={setName} placeholder="Market name" />
+      <Text style={label}>Distance in km</Text>
+      <Field value={distance} onChangeText={setDistance} placeholder="e.g. 2.1 (used only if location is off)" keyboardType="decimal-pad" />
+      <Text style={label}>Map location (gives customers their real distance)</Text>
+      <Field value={lat} onChangeText={(t) => splitPair(t, setLat, setLng, "lat")} placeholder="Latitude, e.g. -15.4167" keyboardType="numbers-and-punctuation" />
+      <View style={{ height: 6 }} />
+      <Field value={lng} onChangeText={(t) => splitPair(t, setLat, setLng, "lng")} placeholder="Longitude, e.g. 28.2833" keyboardType="numbers-and-punctuation" />
+      <Pressable onPress={() => fillFromPhone(setLat, setLng)} style={{ paddingVertical: 8 }}>
+        <Text style={{ fontFamily: fonts.bodySemi, color: colors.customerDeep }}>📍 Use my current location (stand at the market)</Text>
+      </Pressable>
+      <PhotoPicker folder={`markets/${m.id}`} uri={m.image_url} name={m.name} onChange={onImage} />
+      <PrimaryButton label="Save details" onPress={() => onSave(name, distance, lat, lng)} />
+      <View style={{ flexDirection: "row", gap: 18, marginTop: 12 }}>
+        {onUp ? <Link text="Move up" onPress={onUp} /> : null}
+        {onDown ? <Link text="Move down" onPress={onDown} /> : null}
+        <Link text={m.is_active ? "Hide" : "Show"} onPress={onToggle} />
+        <View style={{ flex: 1 }} />
+        <Link text="Delete" danger onPress={onDelete} />
+      </View>
+    </View>
+  );
+}
+
+function Link({ text, onPress, danger }: { text: string; onPress: () => void; danger?: boolean }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8}>
+      <Text style={{ fontFamily: fonts.bodySemi, color: danger ? "#FF6B6B" : ui.red }}>{text}</Text>
+    </Pressable>
+  );
+}
