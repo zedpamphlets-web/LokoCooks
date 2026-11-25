@@ -29,7 +29,7 @@ export default function Market() {
   const name = marketShortName(market?.name);
   const km = distanceText(marketDistanceKm(market, me));
   const { width: screenW } = useWindowDimensions();
-  const bannerH = Math.round(Math.min(210, Math.max(156, (screenW - 32) * 0.46)));
+  const bannerH = Math.round(Math.min(260, Math.max(190, (screenW - 32) * 0.58)));
 
   const retry = () => {
     marketQ.reload();
@@ -48,7 +48,7 @@ export default function Market() {
           {listQ.stale ? <OfflineBanner /> : null}
 
           <View style={s.banner}>
-            <Photo uri={market?.image_url} name={market?.name} height={bannerH} hideLabel contentPosition="center" />
+            <Photo uri={market?.image_url} name={market?.name} height={bannerH} hideLabel contentPosition="top" />
             <LinearGradient colors={["transparent", "rgba(0,0,0,0.7)"]} style={StyleSheet.absoluteFill} />
             <View style={s.bannerText}>
               <Text style={s.bannerName}>{name || "Market"}</Text>
@@ -69,7 +69,7 @@ export default function Market() {
                 style={[s.row, i < list.length - 1 && s.rule]}
               >
                 <View style={s.photo}>
-                  <Photo uri={r.image_url} name={r.name} height={104} width={104} hideLabel />
+                  <Photo uri={r.image_url} name={r.name} height={104} width={104} hideLabel contentPosition="top" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name} numberOfLines={1}>{r.name}</Text>
