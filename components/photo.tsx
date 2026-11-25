@@ -1,5 +1,5 @@
 import { View, Text, StyleProp, ViewStyle, ImageSourcePropType } from "react-native";
-import { Image } from "expo-image";
+import { Image, ContentPosition } from "expo-image";
 import { colors, fonts } from "@/lib/theme";
 
 /** Real uploaded photo, or a Loko Cooks colour tile. Never a stock image. */
@@ -13,6 +13,7 @@ export function Photo({
   overlay,
   fallback,
   hideLabel,
+  contentPosition = "center",
 }: {
   uri?: string | null;
   name?: string;
@@ -25,13 +26,22 @@ export function Photo({
   fallback?: ImageSourcePropType;
   /** No name on the colour tile (use when the card already prints the name on top). */
   hideLabel?: boolean;
+  /** Where cover keeps the subject. Center is the default; top keeps faces and hats in frame. */
+  contentPosition?: ContentPosition;
 }) {
   return (
     <View style={[{ height, width, overflow: "hidden" }, style]}>
       {uri ? (
-        <Image source={{ uri }} style={{ height: "100%", width: "100%" }} contentFit="cover" cachePolicy="memory-disk" transition={150} />
+        <Image
+          source={{ uri }}
+          style={{ height: "100%", width: "100%" }}
+          contentFit="cover"
+          contentPosition={contentPosition}
+          cachePolicy="memory-disk"
+          transition={150}
+        />
       ) : fallback ? (
-        <Image source={fallback} style={{ height: "100%", width: "100%" }} contentFit="cover" transition={150} />
+        <Image source={fallback} style={{ height: "100%", width: "100%" }} contentFit="cover" contentPosition={contentPosition} transition={150} />
       ) : (
         <View
           style={{

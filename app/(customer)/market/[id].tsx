@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -28,6 +28,8 @@ export default function Market() {
   const list = listQ.data || [];
   const name = marketShortName(market?.name);
   const km = distanceText(marketDistanceKm(market, me));
+  const { width: screenW } = useWindowDimensions();
+  const bannerH = Math.round(Math.min(210, Math.max(156, (screenW - 32) * 0.46)));
 
   const retry = () => {
     marketQ.reload();
@@ -42,11 +44,11 @@ export default function Market() {
       ) : listQ.loading ? (
         <LoadingScreen />
       ) : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
           {listQ.stale ? <OfflineBanner /> : null}
 
           <View style={s.banner}>
-            <Photo uri={market?.image_url} name={market?.name} height={112} hideLabel />
+            <Photo uri={market?.image_url} name={market?.name} height={bannerH} hideLabel contentPosition="center" />
             <LinearGradient colors={["transparent", "rgba(0,0,0,0.7)"]} style={StyleSheet.absoluteFill} />
             <View style={s.bannerText}>
               <Text style={s.bannerName}>{name || "Market"}</Text>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Photo } from "@/components/photo";
@@ -15,6 +15,11 @@ import { loadRestaurantMenu, loadRestaurants, NSHIMA_LINE, standLabel, type Menu
 import { kwShort, marketShortName } from "@/lib/format";
 import { Dimensions } from "react-native";
 import { fonts, ui } from "@/lib/theme";
+
+/** Cover sits under the red header, tall enough that cover-crop does not cut off the subject. */
+function coverHeight(screenWidth: number) {
+  return Math.round(Math.min(280, Math.max(200, screenWidth * 0.56)));
+}
 
 const W = Dimensions.get("window").width;
 const PAD = 16;
@@ -35,6 +40,8 @@ export default function RestaurantMenu() {
   }, [rest?.market_id]);
   const meals = menuQ.data || [];
   const fav = useFavourite("restaurant", id);
+  const { width: screenW } = useWindowDimensions();
+  const coverH = coverHeight(screenW);
 
   const loading = restQ.loading || menuQ.loading;
   const failed = restQ.failed && menuQ.failed;
@@ -60,7 +67,9 @@ export default function RestaurantMenu() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
           {restQ.stale || menuQ.stale ? <OfflineBanner /> : null}
-          <Photo uri={rest?.image_url} name={rest?.name} height={150} hideLabel />
+          <View style={s.coverWrap}>
+            <Photo uri={rest?.image_url} name={rest?.name} height={coverH} hideLabel contentPosition="top" style={s.cover} />
+          </View>
           <View style={{ paddingHorizontal: PAD }}>
             {rest?.description ? <Text style={s.desc}>{rest.description}</Text> : null}
             <View style={s.chips}>
@@ -110,6 +119,8 @@ export default function RestaurantMenu() {
 }
 
 const s = StyleSheet.create({
+  coverWrap: { marginHorizontal: PAD, marginTop: 14, borderRadius: 14, overflow: "hidden", backgroundColor: ui.field },
+  cover: { borderRadius: 14 },
   desc: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: ui.sub, marginTop: 12 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: ui.field, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 6 },
